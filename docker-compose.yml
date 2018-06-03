@@ -4,6 +4,10 @@ services:
     build: './web'
     volumes:
       - './web/www:/usr/share/nginx/html'
+      - type: bind
+        source: /home/michiel/bc/log.txt
+        target: /usr/share/nginx/html/fastfox.nl/bc_log.txt
     ports:
       - '80:80'
     command: "nginx -g 'daemon off;'"
+    restart: 'unless-stopped'
