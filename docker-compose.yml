@@ -7,6 +7,9 @@ services:
       - type: bind
         source: /home/michiel/bc/log.txt
         target: /usr/share/nginx/html/fastfox.nl/bc_log.txt
+      - type: bind
+        source: /home/michiel/tt/frontend/build
+        target: /usr/share/nginx/html/tt.fastfox.nl
     ports:
       - '80:80'
     command: "nginx -g 'daemon off;'"
