@@ -10,6 +10,9 @@ services:
       - type: bind
         source: /home/michiel/tt/frontend/build
         target: /usr/share/nginx/html/tt.fastfox.nl
+      - type: bind
+        source: /home/michiel/wt/build
+        target: /usr/share/nginx/html/wt.msvos.nl
     ports:
       - '80:80'
     command: "nginx -g 'daemon off;'"
