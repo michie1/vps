@@ -9,7 +9,7 @@ services:
         target: /usr/share/nginx/html/fastfox.nl/bc_log.txt
       - type: bind
         source: /home/michiel/tt/frontend/build
-        target: /usr/share/nginx/html/tt.fastfox.nl
+        target: /usr/share/nginx/html/tt.msvos.nl
       - type: bind
         source: /home/michiel/wt/build
         target: /usr/share/nginx/html/wt.msvos.nl
