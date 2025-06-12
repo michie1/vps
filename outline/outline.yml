@@ -1,0 +1,159 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: outline
+data:
+  NODE_ENV: "production"
+  URL: "https://docs.msvos.nl"
+  PORT: "80"
+  COLLABORATION_URL: ""
+  CDN_URL: ""
+  WEB_CONCURRENCY: "1"
+  DEFAULT_LANGUAGE: "nl_NL"
+  DATABASE_CONNECTION_POOL_MIN: ""
+  DATABASE_CONNECTION_POOL_MAX: ""
+  PGSSLMODE: "disable"
+  REDIS_URL: "redis://redis:6379"
+  FILE_STORAGE: "local"
+  FILE_STORAGE_LOCAL_ROOT_DIR: "/var/lib/outline/data"
+  FILE_STORAGE_UPLOAD_MAX_SIZE: "262144000"
+  FILE_STORAGE_IMPORT_MAX_SIZE: ""
+  FILE_STORAGE_WORKSPACE_IMPORT_MAX_SIZE: ""
+  AWS_ACCESS_KEY_ID: "get_a_key_from_aws"
+  AWS_SECRET_ACCESS_KEY: "get_the_secret_of_above_key"
+  AWS_REGION: "xx-xxxx-x"
+  AWS_S3_ACCELERATE_URL: ""
+  AWS_S3_UPLOAD_BUCKET_URL: "http://s3:4569"
+  AWS_S3_UPLOAD_BUCKET_NAME: "bucket_name_here"
+  AWS_S3_FORCE_PATH_STYLE: "true"
+  AWS_S3_ACL: "private"
+  SSL_KEY: ""
+  SSL_CERT: ""
+  FORCE_HTTPS: "false"
+  SLACK_CLIENT_ID: ""
+  SLACK_CLIENT_SECRET: ""
+  AZURE_CLIENT_ID: ""
+  AZURE_CLIENT_SECRET: ""
+  AZURE_RESOURCE_APP_ID: ""
+  DISCORD_CLIENT_ID: ""
+  DISCORD_CLIENT_SECRET: ""
+  DISCORD_SERVER_ID: ""
+  DISCORD_SERVER_ROLES: ""
+  OIDC_CLIENT_ID: ""
+  OIDC_CLIENT_SECRET: ""
+  OIDC_AUTH_URI: ""
+  OIDC_TOKEN_URI: ""
+  OIDC_USERINFO_URI: ""
+  OIDC_LOGOUT_URI: ""
+  OIDC_USERNAME_CLAIM: "preferred_username"
+  OIDC_DISPLAY_NAME: "OpenID Connect"
+  OIDC_SCOPES: "openid profile email"
+  SMTP_HOST: "smtp.postmarkapp.com"
+  SMTP_PORT: "587"
+  SMTP_FROM_EMAIL: "outline@fastfox.nl"
+  SMTP_SECURE: "false"
+  RATE_LIMITER_ENABLED: "true"
+  RATE_LIMITER_REQUESTS: "1000"
+  RATE_LIMITER_DURATION_WINDOW: "60"
+  GITHUB_CLIENT_ID: ""
+  GITHUB_CLIENT_SECRET: ""
+  GITHUB_APP_NAME: ""
+  GITHUB_APP_ID: ""
+  GITHUB_APP_PRIVATE_KEY: ""
+  SLACK_VERIFICATION_TOKEN: ""
+  SLACK_APP_ID: ""
+  SLACK_MESSAGE_ACTIONS: "true"
+  DROPBOX_APP_KEY: ""
+  SENTRY_DSN: ""
+  SENTRY_TUNNEL: ""
+  NOTION_CLIENT_ID: ""
+  NOTION_CLIENT_SECRET: ""
+  IFRAMELY_URL: ""
+  IFRAMELY_API_KEY: ""
+  ENABLE_UPDATES: "true"
+  DEBUG: "http"
+  LOG_LEVEL: "info"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: outline-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: outline
+  labels:
+    app: outline
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: outline
+  template:
+    metadata:
+      labels:
+        app: outline
+    spec:
+      containers:
+        - name: outline
+          image: docker.getoutline.com/outlinewiki/outline:latest
+          ports:
+            - containerPort: 80
+          envFrom:
+            - configMapRef:
+                name: outline
+            - secretRef:
+                name: outline-secrets
+          volumeMounts:
+            - name: outline-data
+              mountPath: /var/lib/outline/data
+      volumes:
+        - name: outline-data
+          persistentVolumeClaim:
+            claimName: outline-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: outline
+  labels:
+    app: outline
+spec:
+  type: ClusterIP
+  selector:
+    app: outline
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: docs
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - docs.msvos.nl
+      secretName: docs-cert
+  rules:
+    - host: docs.msvos.nl
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: outline
+                port:
+                  number: 80

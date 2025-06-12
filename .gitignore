@@ -1,1 +1,6 @@
-web/www/fastfox.nl/bc_log.txt
+*-secrets.yml
+backups/
+cr/cr-htpasswd
+.env
+.claude
+grocy/grocy.db

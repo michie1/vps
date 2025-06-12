@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elm-lang
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elm-lang
+  template:
+    metadata:
+      labels:
+        app: elm-lang
+    spec:
+      containers:
+      - name: nginx
+        image: default-cr:5000/elm-lang:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+      imagePullSecrets:
+        - name: regcred # TODO: check if necessary
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elm-lang
+spec:
+  type: ClusterIP
+  selector:
+    app: elm-lang
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: elm-lang
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+      - elm-lang.nl
+      secretName: elm-lang-cert
+  rules:
+  - host: elm-lang.nl
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: elm-lang
+            port:
+              number: 80

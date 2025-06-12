@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cr
+spec:
+  serviceName: cr
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cr
+  template:
+    metadata:
+      labels:
+        app: cr
+    spec:
+      volumes:
+        - name: auth
+          secret:
+            secretName: cr-htpasswd
+      containers:
+        - name: registry
+          image: registry:2
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: registry-storage
+              mountPath: /var/lib/registry
+            - name: auth
+              mountPath: /auth/
+          env:
+            - name: REGISTRY_AUTH
+              value: htpasswd
+            - name: REGISTRY_AUTH_HTPASSWD_REALM
+              value: "Registry Realm"
+            - name: REGISTRY_AUTH_HTPASSWD_PATH
+              value: /auth/htpasswd              
+  volumeClaimTemplates:
+    - metadata:
+        name: registry-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cr
+  annotations:
+    tailscale.com/expose: "true"
+spec:
+  type: ClusterIP
+  selector:
+    app: cr
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cr
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "1g" # Block images larger then 1GB
+    cert-manager.io/cluster-issuer: "letsencrypt"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - cr.msvos.nl
+      secretName: cr-cert
+  rules:
+    - host: cr.msvos.nl
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cr
+                port:
+                  number: 5000
