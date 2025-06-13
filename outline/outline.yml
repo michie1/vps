@@ -50,7 +50,7 @@ data:
   OIDC_SCOPES: "openid profile email"
   SMTP_HOST: "smtp.postmarkapp.com"
   SMTP_PORT: "587"
-  SMTP_FROM_EMAIL: "outline@fastfox.nl"
+  SMTP_FROM_EMAIL: "docs@msvos.nl"
   SMTP_SECURE: "false"
   RATE_LIMITER_ENABLED: "true"
   RATE_LIMITER_REQUESTS: "1000"
