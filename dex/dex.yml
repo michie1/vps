@@ -1,0 +1,146 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dex-config
+data:
+  config.yaml: |
+    issuer: https://dex.msvos.nl
+    storage:
+      type: kubernetes
+      config:
+        inCluster: true
+    web:
+      http: 0.0.0.0:5556
+      allowedOrigins: ['*']
+    connectors: []
+    oauth2:
+      skipApprovalScreen: false
+    staticClients:
+    - id: outline
+      redirectURIs:
+      - 'https://docs.msvos.nl/auth/oidc.callback'
+      name: 'Outline'
+      secret: outline-secret
+    enablePasswordDB: true
+    staticPasswords:
+    - email: "michiel@msvos.nl"
+      hash: "$2b$12$HHgtR3hvjclxUZe0QfthW.o8TKmSqrDSmvhZ79aL8OGHfDv9B.Xrm"
+      username: "Michiel"
+      userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
+    - email: "yvonne@msvos.nl"
+      hash: "$2b$12$7baCbHJiXLxcGjenYgvI/OilmUwop5Hz.E0gimgsUlokFQ6tu3HOC"
+      username: "Yvonne"
+      userID: "18a8684b-db88-4b73-90a9-3cd1661f5467"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dex
+  labels:
+    app: dex
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dex
+  template:
+    metadata:
+      labels:
+        app: dex
+    spec:
+      serviceAccountName: dex
+      containers:
+        - name: dex
+          image: ghcr.io/dexidp/dex:v2.37.0
+          ports:
+            - containerPort: 5556
+              name: http
+          resources:
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+          command:
+            - /usr/local/bin/dex
+            - serve
+            - /etc/dex/cfg/config.yaml
+          volumeMounts:
+            - name: config
+              mountPath: /etc/dex/cfg
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: dex-config
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dex
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dex
+rules:
+- apiGroups: ["dex.coreos.com"]
+  resources: ["*"]
+  verbs: ["*"]
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dex
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dex
+subjects:
+- kind: ServiceAccount
+  name: dex
+  namespace: default
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dex
+  labels:
+    app: dex
+spec:
+  type: ClusterIP
+  selector:
+    app: dex
+  ports:
+    - protocol: TCP
+      port: 5556
+      targetPort: 5556
+      name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dex
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - dex.msvos.nl
+      secretName: dex-cert
+  rules:
+    - host: dex.msvos.nl
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dex
+                port:
+                  number: 5556
