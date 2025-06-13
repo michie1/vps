@@ -106,6 +106,13 @@ spec:
           image: docker.getoutline.com/outlinewiki/outline:latest
           ports:
             - containerPort: 80
+          resources:
+            limits:
+              cpu: "200m"
+              memory: "512Mi"
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
           envFrom:
             - configMapRef:
                 name: outline
