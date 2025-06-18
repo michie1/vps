@@ -1,0 +1,148 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: music-downloader-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: music-downloader-backend
+  template:
+    metadata:
+      labels:
+        app: music-downloader-backend
+    spec:
+      containers:
+        - name: backend
+          image: default-cr:5000/music-downloader-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3001
+          env:
+            - name: PORT
+              value: "3001"
+            - name: DOWNLOADS_PATH
+              value: "/music"
+            - name: PREFIX_COMMAND
+              valueFrom:
+                secretKeyRef:
+                  name: music-downloader-secrets
+                  key: PREFIX_COMMAND
+            - name: DOWNLOAD_PATH
+              valueFrom:
+                secretKeyRef:
+                  name: music-downloader-secrets
+                  key: DOWNLOAD_PATH
+            - name: APP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: music-downloader-secrets
+                  key: APP_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: music-downloader-secrets
+                  key: JWT_SECRET
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+          volumeMounts:
+            - name: music-storage
+              mountPath: /music
+            - name: temp-storage
+              mountPath: /tmp
+      volumes:
+        - name: music-storage
+          persistentVolumeClaim:
+            claimName: navidrome-music
+        - name: temp-storage
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: music-downloader-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: music-downloader-frontend
+  template:
+    metadata:
+      labels:
+        app: music-downloader-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: default-cr:5000/music-downloader-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: music-downloader-backend
+spec:
+  type: ClusterIP
+  selector:
+    app: music-downloader-backend
+  ports:
+    - protocol: TCP
+      port: 3001
+      targetPort: 3001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: music-downloader-frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: music-downloader-frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: music-downloader
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - music-downloader.msvos.nl
+      secretName: music-downloader-cert
+  rules:
+    - host: music-downloader.msvos.nl
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: music-downloader-backend
+                port:
+                  number: 3001
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: music-downloader-frontend
+                port:
+                  number: 80
