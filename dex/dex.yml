@@ -28,7 +28,7 @@ data:
       username: "Michiel"
       userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
     - email: "yvonne@msvos.nl"
-      hash: "$2b$12$7baCbHJiXLxcGjenYgvI/OilmUwop5Hz.E0gimgsUlokFQ6tu3HOC"
+      hash: "$2b$12$jTyYmMesgTbayTXsnICsfuyc4PSK7BnXAGf4dK1yQCktTeoVWE7XC"
       username: "Yvonne"
       userID: "18a8684b-db88-4b73-90a9-3cd1661f5467"
 ---
