@@ -12,13 +12,32 @@ spec:
     app: redis
 
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-1-tailscale
+  annotations:
+    tailscale.com/expose: "true"
+    tailscale.com/funnel: "off"
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  ports:
+    - port: 6379
+      targetPort: 6379
+      protocol: TCP
+  selector:
+    app: redis
+    statefulset.kubernetes.io/pod-name: redis-1
+
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: redis
 spec:
   serviceName: "redis"
-  replicas: 1
+  replicas: 2 # 1 is for outline, 2 is for claude block manager
   selector:
     matchLabels:
       app: redis
