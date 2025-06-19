@@ -12,6 +12,8 @@ spec:
       labels:
         app: music-downloader-backend
     spec:
+      imagePullSecrets:
+        - name: regcred
       containers:
         - name: backend
           image: default-cr:5000/music-downloader-backend:latest
@@ -97,6 +99,8 @@ spec:
       labels:
         app: music-downloader-frontend
     spec:
+      imagePullSecrets:
+        - name: regcred
       containers:
         - name: frontend
           image: default-cr:5000/music-downloader-frontend:latest
