@@ -18,11 +18,25 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 3001
+          command:
+            - /bin/sh
+            - -c
+            - |
+              mkdir -p ~/.ssh
+              cp /ssh-key/ssh-private-key ~/.ssh/id_rsa
+              chmod 600 ~/.ssh/id_rsa
+              echo "StrictHostKeyChecking no" > ~/.ssh/config
+              ssh -f -N -D 1080 -o ServerAliveInterval=60 -o ServerAliveCountMax=3 homeassistant
+              exec node server.js
           env:
             - name: PORT
               value: "3001"
             - name: DOWNLOADS_PATH
               value: "/music"
+            - name: HTTP_PROXY
+              value: "socks5://localhost:1080"
+            - name: HTTPS_PROXY
+              value: "socks5://localhost:1080"
             - name: PREFIX_COMMAND
               valueFrom:
                 secretKeyRef:
@@ -55,12 +69,19 @@ spec:
               mountPath: /music
             - name: temp-storage
               mountPath: /tmp
+            - name: ssh-key
+              mountPath: /ssh-key
+              readOnly: true
       volumes:
         - name: music-storage
           persistentVolumeClaim:
             claimName: navidrome-music
         - name: temp-storage
           emptyDir: {}
+        - name: ssh-key
+          secret:
+            secretName: ssh-tunnel-key
+            defaultMode: 0600
 ---
 apiVersion: apps/v1
 kind: Deployment
